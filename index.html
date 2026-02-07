@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Socket</title>
+    <style>
+      body {
+        font-family: "Courier New", Courier, monospace;
+        padding: 24px;
+        background: radial-gradient(circle at top, #1f1f1f, #0f0f0f);
+        color: #e6edf3;
+        max-width: 800px;
+        margin: auto;
+      }
+
+      h1 {
+        color: #00ffcc;
+        margin-bottom: 6px;
+      }
+
+      h3 {
+        margin-top: 24px;
+        color: #9cdcfe;
+      }
+
+      #status {
+        margin-bottom: 16px;
+        font-weight: bold;
+      }
+
+      .status-on {
+        color: #00ff88;
+      }
+
+      .status-off {
+        color: #ff5c5c;
+      }
+
+      form {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        padding: 10px 12px;
+        background: #111;
+        color: #fff;
+        border: 1px solid #333;
+        border-radius: 6px;
+        outline: none;
+      }
+
+      input[type="text"]:focus {
+        border-color: #00ffcc;
+        box-shadow: 0 0 6px rgba(0, 255, 204, 0.4);
+      }
+
+      button {
+        padding: 10px 16px;
+        background: #00ffcc;
+        color: #000;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        transition:
+          transform 0.1s ease,
+          box-shadow 0.1s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 255, 204, 0.3);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      #log {
+        background: #0b0b0b;
+        padding: 14px;
+        height: 320px;
+        overflow-y: auto;
+        border: 1px solid #222;
+        border-radius: 8px;
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+        white-space: pre-wrap;
+      }
+
+      /* Scrollbar (Chrome / Edge) */
+      #log::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      #log::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 4px;
+      }
+
+      #log::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Web Socket Client</h1>
+    <p id="status" class="status-off">Status: Connecting ...</p>
+
+    <form id="message-form">
+      <input
+        type="text"
+        id="message-input"
+        placeholder="Enter message"
+        required
+      />
+      <button type="submit">Send</button>
+    </form>
+
+    <h3>Live Stream Log</h3>
+    <pre id="log"></pre>
+  </body>
+  <script>
+    const statusEl = document.getElementById("status");
+    const log = document.getElementById("log");
+    const input = document.getElementById("message-input");
+
+    // 1. Initiate the Hnadshake
+    const socket = new WebSocket("ws://localhost:8000");
+    const appendLog = (label, message) => {
+      const entry = `${new Date().toLocaleTimeString()} [${label}]: ${message}\n`;
+      log.textContent = entry + log.textContent;
+    };
+
+    socket.addEventListener("open", () => {
+      statusEl.textContent = "Status: Connected";
+      statusEl.className = "status-on";
+      appendLog("SYSTEM", "Connected to the server.");
+    });
+
+    socket.addEventListener("close", () => {
+      statusEl.textContent = "Status: Disconnected";
+      statusEl.className = "status-off";
+      appendLog("SYSTEM", "Disconnected from the server.");
+    });
+
+    socket.addEventListener("message", (event) => {
+      appendLog("RECEIVED", event.data);
+    });
+
+    document
+      .getElementById("message-form")
+      .addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (socket.readyState !== WebSocket.OPEN) {
+          appendLog("ERROR", "WebSocket is not connected.");
+          return;
+        }
+        const message = input.value.trim();
+        if (message === "") {
+          appendLog("ERROR", "Message is empty.");
+          return;
+        }
+        socket.send(message);
+        appendLog("SENT", message);
+        input.value = "";
+      });
+  </script>
+</html>
